@@ -1,1 +1,7 @@
 BACKUP_PATH = "/path/to/telelegram-history-dump/user.jsonl"
+# you can apply for api key and secret here https://www.rememberthemilk.com/services/api/
+# first, leave token None, api will prompt for authorization on first run, afterwards put the token here
+RTM_API_KEY = "key"
+RTM_API_SECRET = "secret"
+RTM_API_TOKEN = "token"
+STATE_PATH = "/path/to/state/file"
