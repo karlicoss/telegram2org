@@ -1,0 +1,3 @@
+[submodule "modules/kython"]
+	path = modules/kython
+	url = git@github.com:karlicoss/kython.git
