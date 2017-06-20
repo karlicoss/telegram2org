@@ -2,8 +2,7 @@
 from hashlib import md5
 import re
 
-from rtm import createRTM # type: ignore
-
+from kython.enhanced_rtm import EnhancedRtm
 from kython import *
 
 from config import BACKUP_PATH, RTM_API_KEY, RTM_API_TOKEN, RTM_API_SECRET, STATE_PATH
@@ -41,7 +40,7 @@ def load_state() -> List[str]:
 
 def save_state(ids: List[str]):
     with open(STATE_PATH, 'w') as fo:
-        # TODO atomicwrites, add to dima
+        # TODO atomicwrites, add to kython
         json_dumps(fo, ids)
 
 def mark_completed(id_: str):
@@ -50,12 +49,9 @@ def mark_completed(id_: str):
     state.append(id_)
     save_state(state)
 
-def process(api, tasks):
+def submit_tasks(api: EnhancedRtm, tasks):
     state = load_state()
-    timeline = api.timelines.create().timeline  # TODO check for response
 
-    # TODO before adding, check for existence? how to deal with it properly?
-    # I guess, we have to keep some sort of state, tasks get deleted after all...
     for id_, name, notes in tasks:
         if id_ in state:
             logging.info("Skipping " + id_)
@@ -66,22 +62,12 @@ def process(api, tasks):
         cname = name
         for c in ['!', '#', '*', '^', '@', '/']:
             cname = name.replace("c", " ")
-            # cleanup for smart add
+            # cleanup for smart add # TODO move to enhanced rtm?
         tname = cname + " ^today #telegram2rtm" # TODO note sure about today..
-        res = api.tasks.add(timeline=timeline, name=tname, parse=1)
-        lid = res.list.id
-        tsid = res.list.taskseries.id
-        tid = res.list.taskseries.task.id
+        task = api.addTask_(description=tname)
         for note in notes:
             # TODO note might be too long for GET request
-            api.tasksNotes.add(
-                timeline=timeline,
-                list_id=lid,
-                task_id=tid,
-                taskseries_id=tsid,
-                note_text=note,
-                note_title='',
-            )
+            api.addNote(task=task, text=note)
         mark_completed(id_)
 
 def get_rtm_tasks():
@@ -106,8 +92,8 @@ def main():
     logging.info("Fetched {} tasks from telegram".format(len(tasks)))
 
     logging.info("Submitting to RTM...")
-    api = createRTM(RTM_API_KEY, RTM_API_SECRET, RTM_API_TOKEN)
-    process(api, tasks)
+    api = EnhancedRtm(RTM_API_KEY, RTM_API_SECRET, token=RTM_API_TOKEN)
+    submit_tasks(api, tasks)
 
 if __name__ == '__main__':
     setup_logging()
