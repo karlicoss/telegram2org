@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.6
 from hashlib import md5
 import re
 
@@ -20,7 +20,7 @@ def format_group(group: List[Dict]) -> Tuple[str, str, List[str]]:
     else:
         raise RuntimeError
 
-    texts = []
+    texts: List[str] = []
     for m in group:
         if 'text' in m:
             texts.append(m['text'])
@@ -54,10 +54,10 @@ def submit_tasks(api: EnhancedRtm, tasks):
 
     for id_, name, notes in tasks:
         if id_ in state:
-            logging.info("Skipping " + id_)
+            logging.info(f"Skipping {id_}")
             continue
         else:
-            logging.info("Submitting new task to RTM: {}".format(name))
+            logging.info(f"Submitting new task to RTM: {name}")
 
         cname = name
         for c in ['!', '#', '*', '^', '@', '/']:
@@ -89,7 +89,7 @@ def get_rtm_tasks():
 
 def main():
     tasks = get_rtm_tasks()
-    logging.info("Fetched {} tasks from telegram".format(len(tasks)))
+    logging.info(f"Fetched {len(tasks)} tasks from telegram")
 
     logging.info("Submitting to RTM...")
     api = EnhancedRtm(RTM_API_KEY, RTM_API_SECRET, token=RTM_API_TOKEN)
