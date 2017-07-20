@@ -5,7 +5,7 @@ import re
 from kython.enhanced_rtm import EnhancedRtm
 from kython import *
 
-from config import BACKUP_PATH, RTM_API_KEY, RTM_API_TOKEN, RTM_API_SECRET, STATE_PATH
+from config import BACKUP_PATH, RTM_API_KEY, RTM_API_TOKEN, RTM_API_SECRET, STATE_PATH, RTM_TAG
 
 # returns title and comment
 def format_group(group: List[Dict]) -> Tuple[str, str, List[str]]:
@@ -63,7 +63,7 @@ def submit_tasks(api: EnhancedRtm, tasks):
         for c in ['!', '#', '*', '^', '@', '/']:
             cname = name.replace("c", " ")
             # cleanup for smart add # TODO move to enhanced rtm?
-        tname = cname + " ^today #telegram2rtm" # TODO note sure about today..
+        tname = cname + " ^today #" + RTM_TAG
         task = api.addTask_(description=tname)
         for note in notes:
             # TODO note might be too long for GET request
@@ -91,7 +91,7 @@ def main():
     tasks = get_rtm_tasks()
     logging.info(f"Fetched {len(tasks)} tasks from telegram")
 
-    logging.info("Submitting to RTM...")
+    logging.info("Submitting to RTM... (tagged as {})".format(RTM_TAG))
     api = EnhancedRtm(RTM_API_KEY, RTM_API_SECRET, token=RTM_API_TOKEN)
     submit_tasks(api, tasks)
 

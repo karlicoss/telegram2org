@@ -5,3 +5,4 @@ RTM_API_KEY = "key"
 RTM_API_SECRET = "secret"
 RTM_API_TOKEN = "token"
 STATE_PATH = "/path/to/state/file"
+RTM_TAG = "telegram2rtm" # make sure it exists in advance
