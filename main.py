@@ -1,6 +1,7 @@
-#!/usr/bin/python3.6
+#!/usr/bin/env python3.6
 from hashlib import md5
 import re
+import codecs
 
 from kython.enhanced_rtm import EnhancedRtm
 from kython import *
@@ -54,7 +55,7 @@ def submit_tasks(api: EnhancedRtm, tasks):
 
     for id_, name, notes in tasks:
         if id_ in state:
-            logging.info(f"Skipping {id_}")
+            logging.debug(f"Skipping {id_}")
             continue
         else:
             logging.info(f"Submitting new task to RTM: {name}")
@@ -66,13 +67,12 @@ def submit_tasks(api: EnhancedRtm, tasks):
         tname = cname + " ^today #" + RTM_TAG
         task = api.addTask_(description=tname)
         for note in notes:
-            # TODO note might be too long for GET request
-            api.addNote(task=task, text=note)
+            api.addNote(task=task, text=note, long_note_hack=True)
         mark_completed(id_)
 
 def get_rtm_tasks():
     forwarded = []
-    with open(BACKUP_PATH, 'r') as bp:
+    with codecs.open(BACKUP_PATH, 'r', 'utf-8') as bp:
         for line in bp.readlines():
             j = json_loads(line)
             if j['event'] == 'message':
