@@ -3,6 +3,8 @@ from hashlib import md5
 import re
 import codecs
 
+from atomicwrites import atomic_write
+
 from kython.enhanced_rtm import EnhancedRtm
 from kython import *
 
@@ -40,12 +42,11 @@ def load_state() -> List[str]:
             return json_load(fo)
 
 def save_state(ids: List[str]):
-    with open(STATE_PATH, 'w') as fo:
-        # TODO atomicwrites, add to kython
+    with atomic_write(STATE_PATH, overwrite=True, mode='w') as fo:
         json_dumps(fo, ids)
 
 def mark_completed(id_: str):
-    # TODO well not super effecient, but who cares
+    # well not super effecient, but who cares
     state = load_state()
     state.append(id_)
     save_state(state)
