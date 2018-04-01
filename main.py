@@ -3,8 +3,6 @@ from hashlib import md5
 import re
 import codecs
 
-from atomicwrites import atomic_write
-
 from kython.enhanced_rtm import EnhancedRtm
 from kython import *
 
@@ -55,12 +53,6 @@ def submit_tasks(api: EnhancedRtm, tasks):
     state = load_state()
 
     for id_, name, notes in tasks:
-        if id_ in state:
-            logging.debug(f"Skipping {id_}")
-            continue
-        else:
-            logging.info(f"Submitting new task to RTM: {name}")
-
         cname = name
         for c in ['!', '#', '*', '^', '@', '/']:
             cname = name.replace("c", " ")
@@ -88,8 +80,27 @@ def get_rtm_tasks():
         tasks.append((id_, title, texts))
     return tasks
 
+
+get_tg_tasks = get_rtm_tasks
+
+def iter_new_tasks():
+    tasks = get_tg_tasks()
+    state = load_state()
+
+    for t in tasks:
+        id_, name, notes = t
+        if id_ in state:
+            logging.debug(f"Skipping {id_}")
+            continue
+        else:
+            logging.info(f"Handling new task: {name}")
+            yield t
+
+def get_new_tasks():
+    return list(iter_new_tasks())
+
 def main():
-    tasks = get_rtm_tasks()
+    tasks = get_new_tasks()
     logging.info(f"Fetched {len(tasks)} tasks from telegram")
 
     logging.info("Submitting to RTM... (tagged as {})".format(RTM_TAG))
