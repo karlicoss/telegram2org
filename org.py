@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
+from datetime import datetime
 import re
 
-from config import ORG_FILE_PATH
+from kython.org import date2org
 
+from config import ORG_FILE_PATH
 from main import get_new_tasks, mark_completed # TODO move to common?
 
-# TODO add date!
 def as_org(task) -> str:
     id_, name, notes = task
     name = re.sub(r'\s', ' ', name)
-    res = f"* TODO {name}\n" + "\n".join(notes)
+
+    dt = datetime.now()
+
+    # TODO not sure, should I use scheduled?
+    res = f"* TODO <{date2org(dt)}> {name}\n" + "\n".join(notes)
     return res
 
 
@@ -22,7 +27,7 @@ def main():
     orgs = [as_org(t) for t in tasks]
     ss = '\n\n'.join(orgs) + '\n\n'
 
-    # https://stackoverflow.com/a/13232181 should be atomic
+    # https://stackoverflow.com/a/13232181 should be atomic?
     import io
     with io.open(ORG_FILE_PATH, 'a') as fo:
         fo.write(ss)
