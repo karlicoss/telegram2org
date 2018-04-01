@@ -14,15 +14,12 @@ def as_org(task) -> str:
     dt = datetime.now()
 
     # TODO not sure, should I use scheduled?
-    res = f"* TODO <{date2org(dt)}> {name}\n" + "\n".join(notes)
+    res = f"* TODO {name}\n  SCHEDULED: <{date2org(dt)}>\n" + "\n".join(notes)
     return res
 
 
 def main():
     tasks = get_new_tasks()
-    from pprint import pprint
-    pprint(tasks)
-    # TODO how to append atomically??
 
     orgs = [as_org(t) for t in tasks]
     ss = '\n\n'.join(orgs) + '\n\n'
