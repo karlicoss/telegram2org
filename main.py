@@ -1,15 +1,24 @@
 #!/usr/bin/env python3.6
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+
 from hashlib import md5
 import re
 import codecs
 
 from kython.enhanced_rtm import EnhancedRtm
-from kython import *
+
+from kython import json_loads, atomic_write, json_dumps, group_by_key, json_load, setup_logging
+
+from typing import List, Dict, Any, Tuple
+
+from os.path import isfile
 
 from config import BACKUP_PATH, RTM_API_KEY, RTM_API_TOKEN, RTM_API_SECRET, STATE_PATH, RTM_TAG
 
 # returns title and comment
-def format_group(group: List[Dict]) -> Tuple[str, str, List[str]]:
+def format_group(group: List[Dict]) -> Tuple[int, str, List[str]]:
     from_ = None
     fwd_from = group[0]['fwd_from']
     if 'username' in fwd_from:
@@ -32,27 +41,35 @@ def format_group(group: List[Dict]) -> Tuple[str, str, List[str]]:
     link = f"https://web.telegram.org/#/im?p=@{from_}"
 
     from_ += " " + ' '.join(texts)[:40]
-    id_ = re.sub('\s+', '_', from_) + "_" + md5(from_.encode('utf-8')).hexdigest()
+    # id_ = re.sub('\s+', '_', from_) + "_" + md5(from_.encode('utf-8')).hexdigest()
     # TODO hmm, maybe using exported messages as a state wasn't such a great idea... use date?
     texts.append(link)
 
-    return (id_, from_, texts)
+    date = group[0]['date']
 
-def load_state() -> List[str]:
+    return (date, from_, texts)
+
+State = Dict[str, Any]
+# contains: 'date' -- last date that was forwarded
+# supplementary information, e.g. last message, mainly form debugging
+
+def load_state() -> State:
     if not isfile(STATE_PATH):
-        return []
+        return {'date': -1}
     else:
         with open(STATE_PATH, 'r') as fo:
             return json_load(fo)
 
-def save_state(ids: List[str]):
+def save_state(state: State):
     with atomic_write(STATE_PATH, overwrite=True, mode='w') as fo:
-        json_dumps(fo, ids)
+        json_dumps(fo, state)
 
-def mark_completed(id_: str):
+def mark_completed(new_date: int):
     # well not super effecient, but who cares
     state = load_state()
-    state.append(id_)
+    last = state['date']
+    assert new_date > last
+    state['date'] = new_date
     save_state(state)
 
 def submit_tasks(api: EnhancedRtm, tasks):
@@ -91,9 +108,9 @@ def iter_new_tasks():
     state = load_state()
 
     for t in tasks:
-        id_, name, notes = t
-        if id_ in state:
-            logging.debug(f"Skipping {id_}")
+        date, name, notes = t
+        if date <= state['date']:
+            logging.debug(f"Skipping {date}")
             continue
         else:
             logging.info(f"Handling new task: {name}")
