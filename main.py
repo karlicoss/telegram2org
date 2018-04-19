@@ -19,7 +19,7 @@ def format_group(group: List[Dict]) -> Tuple[str, str, List[str]]:
     elif 'title' in fwd_from:
         from_ = fwd_from['title']
     else:
-        raise RuntimeError
+        raise RuntimeError(f"Couldn't extract from: {fwd_from}")
 
     texts: List[str] = []
     for m in group:
@@ -27,9 +27,15 @@ def format_group(group: List[Dict]) -> Tuple[str, str, List[str]]:
             texts.append(m['text'])
         if 'media' in m:
             texts.append("<SOME MEDIA>")
+            # TODO handle urls
+
+    link = f"https://web.telegram.org/#/im?p=@{from_}"
 
     from_ += " " + ' '.join(texts)[:40]
     id_ = re.sub('\s+', '_', from_) + "_" + md5(from_.encode('utf-8')).hexdigest()
+    # TODO hmm, maybe using exported messages as a state wasn't such a great idea... use date?
+    texts.append(link)
+
     return (id_, from_, texts)
 
 def load_state() -> List[str]:
@@ -63,7 +69,7 @@ def submit_tasks(api: EnhancedRtm, tasks):
             api.addNote(task=task, text=note, long_note_hack=True)
         mark_completed(id_)
 
-def get_rtm_tasks():
+def get_tg_tasks():
     forwarded = []
     with codecs.open(BACKUP_PATH, 'r', 'utf-8') as bp:
         for line in bp.readlines():
@@ -79,9 +85,6 @@ def get_rtm_tasks():
         id_, title, texts = format_group(group)
         tasks.append((id_, title, texts))
     return tasks
-
-
-get_tg_tasks = get_rtm_tasks
 
 def iter_new_tasks():
     tasks = get_tg_tasks()

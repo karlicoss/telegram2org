@@ -29,8 +29,8 @@ def main():
     with io.open(ORG_FILE_PATH, 'a') as fo:
         fo.write(ss)
 
-    for id_, _, _ in tasks:
-        mark_completed(id_)
+    for date, _, _ in tasks:
+        mark_completed(date)
 
 
 if __name__ == '__main__':
