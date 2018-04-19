@@ -34,15 +34,21 @@ def format_group(group: List[Dict]) -> Tuple[int, str, List[str]]:
     for m in group:
         if 'text' in m:
             texts.append(m['text'])
-        if 'media' in m:
-            texts.append("<SOME MEDIA>")
-            # TODO handle urls
+        media = m.get('media', None)
+        if media is not None:
+            mtype = media['type']
+            if mtype == 'webpage':
+                url = media.get('url', '')
+                title = media.get('title', '')
+                texts.append(f"{url}   {title}")
+            elif mtype == 'photo':
+                texts.append(f"<SOME PHOTO ({media.get('caption', '')})")
+            else:
+                texts.append(f"<SOME MEDIA ({mtype})>")
 
     link = f"https://web.telegram.org/#/im?p=@{from_}"
 
     from_ += " " + ' '.join(texts)[:40]
-    # id_ = re.sub('\s+', '_', from_) + "_" + md5(from_.encode('utf-8')).hexdigest()
-    # TODO hmm, maybe using exported messages as a state wasn't such a great idea... use date?
     texts.append(link)
 
     date = group[0]['date']
