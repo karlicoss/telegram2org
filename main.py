@@ -7,8 +7,6 @@ from hashlib import md5
 import re
 import codecs
 
-from kython.enhanced_rtm import EnhancedRtm
-
 from kython import json_loads, atomic_write, json_dumps, group_by_key, json_load, setup_logging
 
 from typing import List, Dict, Any, Tuple
@@ -78,7 +76,7 @@ def mark_completed(new_date: int):
     state['date'] = new_date
     save_state(state)
 
-def submit_tasks(api: EnhancedRtm, tasks):
+def submit_tasks(api, tasks):
     state = load_state()
 
     for id_, name, notes in tasks:
@@ -130,6 +128,8 @@ def main():
     logging.info(f"Fetched {len(tasks)} tasks from telegram")
 
     logging.info("Submitting to RTM... (tagged as {})".format(RTM_TAG))
+    from kython.enhanced_rtm import EnhancedRtm
+
     api = EnhancedRtm(RTM_API_KEY, RTM_API_SECRET, token=RTM_API_TOKEN)
     submit_tasks(api, tasks)
 
