@@ -1,26 +1,24 @@
 #!/usr/bin/env python3.6
-import sys, ipdb, traceback; exec("def info(type, value, tb):\n    traceback.print_exception(type, value, tb)\n    ipdb.pm()"); sys.excepthook = info # type: ignore
+from datetime import datetime
 import logging
-
-from hashlib import md5
+from os.path import isfile
 import re
-import codecs
+from typing import List, Dict, Any, Tuple, NamedTuple
+
+from telethon import TelegramClient # type: ignore
+from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMediaDocument # type: ignore
+from telethon.tl.types import MessageService # type: ignore
+
 
 from kython import json_loads, atomic_write, json_dumps, group_by_key, json_load
+from kython.org import date2org
+from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID
 
 from kython.logging import setup_logzero
+
 logger = logging.getLogger("telegram2org")
 setup_logzero(logger, level=logging.DEBUG)
 
-from typing import List, Dict, Any, Tuple
-
-from os.path import isfile
-
-from config import BACKUP_PATH, RTM_API_KEY, RTM_API_TOKEN, RTM_API_SECRET, STATE_PATH, RTM_TAG
-
-
-from datetime import datetime
-from typing import NamedTuple
 
 # returns title and comment
 def format_group(group: List) -> Tuple[int, str, List[str]]:
@@ -37,7 +35,6 @@ def format_group(group: List) -> Tuple[int, str, List[str]]:
 
     from_ = ', '.join(sorted({get_from(m) for m in group}))
 
-    from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMediaDocument # type: ignore
 
     texts: List[str] = []
     for m in group:
@@ -55,8 +52,6 @@ def format_group(group: List) -> Tuple[int, str, List[str]]:
             texts.append("*DOCUMENT*")
         else:
             logger.error(f"Unknown media {type(e)}")
-            import ipdb; ipdb.set_trace() 
-            # TODO FIXME photos; other types
 
     link = f"https://web.telegram.org/#/im?p=@{from_}" # TODO err. from_ wouldn't work here...
 
@@ -88,20 +83,6 @@ def mark_completed(new_date: int):
     state['date'] = new_date
     save_state(state)
 
-def submit_tasks(api, tasks):
-    state = load_state()
-
-    for id_, name, notes in tasks:
-        cname = name
-        for c in ['!', '#', '*', '^', '@', '/']:
-            cname = name.replace("c", " ")
-            # cleanup for smart add # TODO move to enhanced rtm?
-        tname = cname + " ^today #" + RTM_TAG
-        task = api.addTask_(description=tname)
-        for note in notes:
-            api.addNote(task=task, text=note, long_note_hack=True)
-        mark_completed(id_)
-
 def get_tg_tasks():
     import logging
     ll = logging.getLogger('telethon.telegram_bare_client')
@@ -109,12 +90,7 @@ def get_tg_tasks():
     ll = logging.getLogger('telethon.extensions.tcp_client')
     ll.setLevel(level=logging.INFO)
 
-    from telethon import TelegramClient # type: ignore
-    from telethon.tl.types import MessageService # type: ignore
-
-    from telegram_secrets import APP_ID, APP_HASH # type: ignore
-
-    client = TelegramClient('session', APP_ID, APP_HASH)
+    client = TelegramClient('session', TG_APP_ID, TG_APP_HASH)
     client.connect()
     client.start()
     rtm_dialog = next(d for d in client.get_dialogs() if d.name == 'RTM')
@@ -146,15 +122,31 @@ def iter_new_tasks():
 def get_new_tasks():
     return list(iter_new_tasks())
 
+def as_org(task) -> str:
+    id_, name, notes = task
+    name = re.sub(r'\s', ' ', name)
+
+    dt = datetime.now()
+
+    tag = '' if ORG_TAG is None else f':{ORG_TAG}:'
+    res = f"* TODO {name} {tag}\n  SCHEDULED: <{date2org(dt)}>\n" + "\n".join(notes)
+    return res
+
+
 def main():
     tasks = get_new_tasks()
-    logger.info(f"Fetched {len(tasks)} tasks from telegram")
 
-    logger.info("Submitting to RTM... (tagged as {})".format(RTM_TAG))
-    from kython.enhanced_rtm import EnhancedRtm
+    orgs = [as_org(t) for t in tasks]
+    ss = '\n\n'.join(orgs) + '\n\n'
 
-    api = EnhancedRtm(RTM_API_KEY, RTM_API_SECRET, token=RTM_API_TOKEN)
-    submit_tasks(api, tasks)
+    # https://stackoverflow.com/a/13232181 should be atomic?
+    import io
+    with io.open(ORG_FILE_PATH, 'a') as fo:
+        fo.write(ss)
+
+    for date, _, _ in tasks:
+        mark_completed(date)
+
 
 if __name__ == '__main__':
     main()

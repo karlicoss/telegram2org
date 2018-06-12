@@ -1,8 +1,7 @@
-BACKUP_PATH = "/path/to/telelegram-history-dump/user.jsonl"
-# you can apply for api key and secret here https://www.rememberthemilk.com/services/api/
-# first, leave token None, api will prompt for authorization on first run, afterwards put the token here
-RTM_API_KEY = "key"
-RTM_API_SECRET = "secret"
-RTM_API_TOKEN = "token"
 STATE_PATH = "/path/to/state/file"
-RTM_TAG = "telegram2rtm" # make sure it exists in advance
+
+TG_APP_ID = 12345
+TG_APP_HASH = "g3ergegg"
+
+ORG_TAG = "telegram2rtm" # can be None if you don't want a tag
+ORG_FILE_PATH = "/path/to/output.org"
