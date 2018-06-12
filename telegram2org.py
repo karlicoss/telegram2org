@@ -12,7 +12,7 @@ from telethon.tl.types import MessageService # type: ignore
 
 from kython import json_loads, atomic_write, json_dumps, group_by_key, json_load
 from kython.org import date2org
-from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID
+from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION
 
 from kython.logging import setup_logzero
 
@@ -90,7 +90,7 @@ def get_tg_tasks():
     ll = logging.getLogger('telethon.extensions.tcp_client')
     ll.setLevel(level=logging.INFO)
 
-    client = TelegramClient('session', TG_APP_ID, TG_APP_HASH)
+    client = TelegramClient(TELETHON_SESSION, TG_APP_ID, TG_APP_HASH)
     client.connect()
     client.start()
     rtm_dialog = next(d for d in client.get_dialogs() if d.name == 'RTM')
