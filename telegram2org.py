@@ -5,6 +5,7 @@ from os.path import isfile
 import re
 from typing import List, Dict, Any, Tuple, NamedTuple
 
+import pytz
 from telethon import TelegramClient # type: ignore
 from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMediaDocument # type: ignore
 from telethon.tl.types import MessageService # type: ignore
@@ -126,7 +127,8 @@ def as_org(task) -> str:
     id_, name, notes = task
     name = re.sub(r'\s', ' ', name)
 
-    dt = datetime.now()
+    london_tz = pytz.timezone('Europe/London')
+    dt = datetime.now(london_tz)
 
     tag = '' if ORG_TAG is None else f':{ORG_TAG}:'
     res = f"""* TODO {name} {tag}
