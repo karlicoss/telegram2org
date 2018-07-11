@@ -136,6 +136,10 @@ def as_org(task) -> str:
 def main():
     tasks = get_new_tasks()
 
+    if len(tasks) == 0:
+        logger.info(f"No new tasks, exiting..")
+        return
+
     orgs = [as_org(t) for t in tasks]
     ss = '\n\n'.join(orgs) + '\n\n'
 
