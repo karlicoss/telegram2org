@@ -129,7 +129,12 @@ def as_org(task) -> str:
     dt = datetime.now()
 
     tag = '' if ORG_TAG is None else f':{ORG_TAG}:'
-    res = f"* TODO {name} {tag}\n  SCHEDULED: <{date2org(dt)}>\n" + "\n".join(notes)
+    res = f"""* TODO {name} {tag}
+  SCHEDULED: <{date2org(dt)}>
+:PROPERTIES:
+:CREATED:  [{date2org(dt)}]
+:END:
+""" + "\n".join(notes)
     return res
 
 
@@ -149,7 +154,8 @@ def main():
         fo.write(ss)
 
     for date, _, _ in tasks:
-        mark_completed(date)
+        pass
+        # mark_completed(date)
 
 
 if __name__ == '__main__':

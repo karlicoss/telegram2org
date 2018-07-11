@@ -1,0 +1,2 @@
+APP_ID = 1234
+APP_HASH = ""
