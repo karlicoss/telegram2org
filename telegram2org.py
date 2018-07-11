@@ -154,8 +154,7 @@ def main():
         fo.write(ss)
 
     for date, _, _ in tasks:
-        pass
-        # mark_completed(date)
+        mark_completed(date)
 
 
 if __name__ == '__main__':
