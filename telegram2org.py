@@ -11,7 +11,7 @@ from telethon.tl.types import MessageService # type: ignore
 
 
 from kython import json_loads, atomic_write, json_dumps, group_by_key, json_load
-from kython.org import date2org
+from kython.org import date2org, datetime2org
 from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION
 
 from kython.logging import setup_logzero
@@ -132,7 +132,7 @@ def as_org(task) -> str:
     res = f"""* TODO {name} {tag}
   SCHEDULED: <{date2org(dt)}>
 :PROPERTIES:
-:CREATED:  [{date2org(dt)}]
+:CREATED:  [{datetime2org(dt)}]
 :END:
 """ + "\n".join(notes)
     return res
