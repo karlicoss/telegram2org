@@ -6,6 +6,7 @@ import re
 from typing import List, Dict, Any, Tuple, NamedTuple
 
 import pytz
+import telethon.sync # type: ignore
 from telethon import TelegramClient # type: ignore
 from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMediaDocument # type: ignore
 from telethon.tl.types import MessageService # type: ignore
@@ -17,22 +18,30 @@ from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID, T
 
 from kython.logging import setup_logzero
 
-logger = logging.getLogger("telegram2org")
-setup_logzero(logger, level=logging.DEBUG)
-
+def get_logger():
+    return logging.getLogger("telegram2org")
 
 # returns title and comment
 def format_group(group: List) -> Tuple[int, str, List[str]]:
+    logger = get_logger()
+
     date = int(group[0].date.timestamp())
 
     def get_from(m):
-        fwd_from = m.fwd_from_entity
-        if fwd_from is not None:
-            if fwd_from.username is None:
-                return f"{fwd_from.first_name} {fwd_from.last_name}"
-            return fwd_from.username
+        fw = m.forward
+        if fw is not None:
+            if fw.sender is None:
+                if fw.chat is not None:
+                    return fw.chat.title
+                else:
+                    return "ERROR UNKNOWN SENDER"
+            u = fw.sender
+            if u.username is not None:
+                return u.username
+            else:
+                return f"{u.first_name} {u.last_name}"
         else:
-            return 'me'
+            return "me"
 
     from_ = ', '.join(sorted({get_from(m) for m in group}))
 
@@ -56,7 +65,15 @@ def format_group(group: List) -> Tuple[int, str, List[str]]:
 
     link = f"https://web.telegram.org/#/im?p=@{from_}" # TODO err. from_ wouldn't work here...
 
-    from_ += " " + ' '.join(texts)[:40]
+    texts = list(reversed(texts))
+
+    if len(texts) > 0: # why wouldn't it be? ... but whatever
+        from_ += " " + texts[0]
+        texts = texts[1:]
+    while len(texts) > 0 and len(from_) < 150:
+        from_ += " " + texts[0]
+        texts = texts[1:]
+
     texts.append(link)
 
     return (date, from_, texts)
@@ -108,6 +125,7 @@ def get_tg_tasks():
 
 
 def iter_new_tasks():
+    logger = get_logger()
     tasks = get_tg_tasks()
     state = load_state()
 
@@ -141,6 +159,9 @@ def as_org(task) -> str:
 
 
 def main():
+    logger = get_logger()
+    setup_logzero(logger, level=logging.DEBUG)
+
     tasks = get_new_tasks()
 
     if len(tasks) == 0:
@@ -155,8 +176,8 @@ def main():
     with io.open(ORG_FILE_PATH, 'a') as fo:
         fo.write(ss)
 
-    for date, _, _ in tasks:
-        mark_completed(date)
+    # for date, _, _ in tasks:
+    #     mark_completed(date)
 
 
 if __name__ == '__main__':
