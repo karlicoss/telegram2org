@@ -2,6 +2,7 @@
 from datetime import datetime
 import logging
 from os.path import isfile
+from sys import argv
 import re
 from typing import List, Dict, Any, Tuple, NamedTuple
 
@@ -9,7 +10,7 @@ import pytz
 import telethon.sync # type: ignore
 from telethon import TelegramClient # type: ignore
 from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMediaDocument # type: ignore
-from telethon.tl.types import MessageService # type: ignore
+from telethon.tl.types import MessageService, WebPageEmpty # type: ignore
 
 
 from kython import json_loads, atomic_write, json_dumps, group_by_key, json_load
@@ -54,7 +55,11 @@ def format_group(group: List) -> Tuple[int, str, List[str]]:
         e = m.media
         if isinstance(e, MessageMediaWebPage):
             page = e.webpage
-            uu = f"{page.url} {page.title}"
+            uu: str
+            if isinstance(page, WebPageEmpty):
+                uu = "*empty web page*"
+            else:
+                uu = f"{page.url} {page.title}"
             texts.append(uu)
         elif isinstance(e, MessageMediaPhoto):
             texts.append("*PHOTO*")
@@ -162,6 +167,12 @@ def main():
     logger = get_logger()
     setup_logzero(logger, level=logging.DEBUG)
 
+    test: bool
+    if len(argv) > 1 and argv[1] == '--test':
+        test = True
+    else:
+        test = False
+
     tasks = get_new_tasks()
 
     if len(tasks) == 0:
@@ -176,8 +187,9 @@ def main():
     with io.open(ORG_FILE_PATH, 'a') as fo:
         fo.write(ss)
 
-    for date, _, _ in tasks:
-        mark_completed(date)
+    if not test:
+        for date, _, _ in tasks:
+            mark_completed(date)
 
 
 if __name__ == '__main__':
