@@ -2,6 +2,7 @@
 from datetime import datetime
 import logging
 from os.path import isfile
+import sys
 from sys import argv
 import re
 from typing import List, Dict, Any, Tuple, NamedTuple
@@ -173,7 +174,12 @@ def main():
     else:
         test = False
 
-    tasks = get_new_tasks()
+    try:
+        tasks = get_new_tasks()
+    except telethon.errors.rpcerrorlist.RpcMcgetFailError as e:
+        logger.error(f"Telegram has internal issues...")
+        sys.exit(2)
+
 
     if len(tasks) == 0:
         logger.info(f"No new tasks, exiting..")
