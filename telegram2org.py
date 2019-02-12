@@ -178,6 +178,7 @@ def main():
         tasks = get_new_tasks()
     except telethon.errors.rpcerrorlist.RpcMcgetFailError as e:
         logger.error(f"Telegram has internal issues...")
+        logger.exception(e)
         sys.exit(2)
 
 
