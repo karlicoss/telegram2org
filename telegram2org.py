@@ -108,11 +108,8 @@ def mark_completed(new_date: int):
     save_state(state)
 
 def get_tg_tasks():
-    import logging
-    ll = logging.getLogger('telethon.telegram_bare_client')
-    ll.setLevel(level=logging.INFO)
-    ll = logging.getLogger('telethon.extensions.tcp_client')
-    ll.setLevel(level=logging.INFO)
+    logging.getLogger('telethon.telegram_bare_client').setLevel(logging.INFO)
+    logging.getLogger('telethon.extensions.tcp_client').setLevel(logging.INFO)
 
     client = TelegramClient(TELETHON_SESSION, TG_APP_ID, TG_APP_HASH)
     client.connect()
