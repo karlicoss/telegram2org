@@ -176,7 +176,7 @@ def main():
     except telethon.errors.rpcerrorlist.RpcMcgetFailError as e:
         logger.error(f"Telegram has internal issues...")
         logger.exception(e)
-        if 'Telegram is having internal issues, please try again later' in e.message:
+        if 'Telegram is having internal issues, please try again later' in str(e):
             logger.info('ignoring the exception, it just happens sometimes...')
             sys.exit(0)
         else:
