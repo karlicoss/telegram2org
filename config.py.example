@@ -10,3 +10,5 @@ ORG_TAG = "telegram2rtm" # can be None if you don't want a tag
 
 # especially useful in cron, where you can't enter the password
 TELETHON_SESSION = "/path/to/telethon/session/session.session"
+
+TIMEZONE = 'Europe/London'
