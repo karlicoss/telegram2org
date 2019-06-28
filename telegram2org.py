@@ -51,7 +51,7 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
     froms = [get_from(m) for m in group]
     tags = {NAME_TO_TAG[f] for f in froms if f in NAME_TO_TAG}
 
-    from_ = ', '.join(org_link(url=f'https://t.me/{f}', title=f) for f in sorted(froms))
+    from_ = ', '.join(org_link(url=f'https://t.me/{f}', title=f) for f in sorted(set(froms)))
 
     texts: List[str] = []
     for m in group:
@@ -94,16 +94,18 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
     # TODO detect by data-msg-id?
     texts = list(reversed(texts))
 
-    # meh. not sure if should do that..
-    if len(texts) > 0: # why wouldn't it be? ... but whatever
-        from_ += " " + texts[0]
-        texts = texts[1:]
-    while len(texts) > 0 and len(from_) < 150:
-        from_ += " " + texts[0]
-        texts = texts[1:]
 
-    from_ = re.sub(r'\s', ' ', from_)
-    return (date, from_, tags, texts)
+    heading = from_
+    LIMIT = 400
+    lines = '\n'.join(texts).splitlines() # meh
+    for line in lines:
+        if len(heading) + len(line) <= LIMIT:
+            heading += " " + line
+        else:
+            break
+
+    heading = re.sub(r'\s', ' ', heading) # TODO rely on korg for that?
+    return (date, heading, tags, texts)
 
 
 def _fetch_tg_tasks(logger):
