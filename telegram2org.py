@@ -2,56 +2,62 @@
 from datetime import datetime
 import logging
 import re
-from typing import List, Dict, Tuple, Collection
+from typing import List, Dict, Tuple, Collection, Set
 import pytz
 
 import telethon.sync # type: ignore
 from telethon import TelegramClient # type: ignore
-from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMediaDocument # type: ignore
+from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMediaDocument, MessageMediaVenue # type: ignore
 from telethon.tl.types import MessageService, WebPageEmpty # type: ignore
 
 
 from kython import json_loads, atomic_write, json_dumps, group_by_key, json_load
 from kython import import_from
-from kython.korg import date2org, datetime2org
+from kython.korg import date2org, datetime2org, link as org_link
 from kython.klogging import setup_logzero
 
 orger = import_from('/L/coding', 'orger')
 from orger import OrgViewAppend, OrgWithKey
 from orger.org_utils import OrgTree, as_org
 
-from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION, GROUP_NAME, TIMEZONE
+from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION, GROUP_NAME, TIMEZONE, NAME_TO_TAG
 
 
 Timestamp = int
 From = str
 Lines = List[str]
+Tags = Set[str]
 
-def format_group(group: List, logger) -> Tuple[Timestamp, From, Lines]:
+
+def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Lines]:
     date = int(group[0].date.timestamp())
 
     def get_from(m):
         fw = m.forward
-        if fw is not None:
-            if fw.sender is None:
-                if fw.chat is not None:
-                    return fw.chat.title
-                else:
-                    return "ERROR UNKNOWN SENDER"
-            u = fw.sender
-            if u.username is not None:
-                return u.username
+        if fw is None:
+            return 'me'
+
+        if fw.sender is None:
+            if fw.chat is not None:
+                return fw.chat.title
             else:
-                return f"{u.first_name} {u.last_name}"
+                return "ERROR UNKNOWN SENDER"
+        u = fw.sender
+        if u.username is not None:
+            return u.username
         else:
-            return "me"
+            return f"{u.first_name} {u.last_name}"
 
-    from_ = ', '.join(sorted({get_from(m) for m in group}))
+    froms = [get_from(m) for m in group]
+    tags = {NAME_TO_TAG[f] for f in froms if f in NAME_TO_TAG}
 
+    from_ = ', '.join(org_link(url=f'https://t.me/{f}', title=f) for f in sorted(froms))
 
     texts: List[str] = []
     for m in group:
-        texts.append(m.text)
+        texts.append(m.message)
+        # TODO hmm, _text contains markdown? could convert it to org...
+        # TODO use m.entities??
         if m.media is None:
             continue
         e = m.media
@@ -61,21 +67,34 @@ def format_group(group: List, logger) -> Tuple[Timestamp, From, Lines]:
             if isinstance(page, WebPageEmpty):
                 uu = "*empty web page*"
             else:
-                uu = f"{page.url} {page.title}"
+                title = page.display_url if page.title is None else page.title
+                uu = org_link(url=page.url, title=title)
+                if page.description is not None:
+                    uu += ' ' + page.description
             texts.append(uu)
         elif isinstance(e, MessageMediaPhoto):
+            # TODO no file location? :(
             texts.append("*PHOTO*")
+            print(vars(e))
         elif isinstance(e, MessageMediaDocument):
             texts.append("*DOCUMENT*")
+            print(vars(e.document))
+        elif isinstance(e, MessageMediaVenue):
+            texts.append("*VENUE* " + e.title)
         else:
             logger.error(f"Unknown media {type(e)}")
+            # raise RuntimeError
+            # TODO contribute 1 to exit code? or emit Error?
 
-    # TODO use telegram link same way I figured out in wereyouere
-    # TODO format links
-    link = f"https://web.telegram.org/#/im?p=@{from_}" # TODO err. from_ wouldn't work here...
-
+    # chat = dialog.name
+    # mid = group[0].id
+    # TODO ugh. doesn't seem to be possible to jump to private dialog :(
+    # and couldn't get original forwarded message id from message object..
+    # in_context = f'https://t.me/{chat}/{mid}'
+    # TODO detect by data-msg-id?
     texts = list(reversed(texts))
 
+    # meh. not sure if should do that..
     if len(texts) > 0: # why wouldn't it be? ... but whatever
         from_ += " " + texts[0]
         texts = texts[1:]
@@ -83,10 +102,8 @@ def format_group(group: List, logger) -> Tuple[Timestamp, From, Lines]:
         from_ += " " + texts[0]
         texts = texts[1:]
 
-    texts.append(link)
-
     from_ = re.sub(r'\s', ' ', from_)
-    return (date, from_, texts)
+    return (date, from_, tags, texts)
 
 
 def _fetch_tg_tasks(logger):
@@ -100,19 +117,19 @@ def _fetch_tg_tasks(logger):
     grouped = group_by_key(messages, lambda f: f.date) # group together multiple forwarded messages. not sure if there is a more robust way but that works well
     tasks = []
     for _, group in sorted(grouped.items(), key=lambda f: f[0]):
-        id_, title, texts = format_group(group, logger=logger)
-        tasks.append((id_, title, texts))
+        res = format_group(group, dialog=todo_dialog, logger=logger)
+        tasks.append(res)
     return tasks
 
 
 def fetch_tg_tasks(logger):
     try:
         # return [
-        #     (1234, 'me', [
+        #     (1234, 'me', {}, [
         #         'line 1',
         #         'line 2',
         #     ]),
-        #     (24314, 'llll', [
+        #     (24314, 'llll', {}, [
         #         'something',
         #     ]),
         # ]
@@ -144,11 +161,12 @@ class Telegram2Org(OrgViewAppend):
             OrgTree(as_org(
                 todo=True,
                 heading=name,
+                tags=tags,
                 body='\n'.join(lines + ['']),
                 created=now, # TODO scheduled automatic from todo=True? might be confusing
                 inline_created=False,
             ))
-        ) for timestamp, name, lines in fetch_tg_tasks(logger=self.logger)]
+        ) for timestamp, name, tags, lines in fetch_tg_tasks(logger=self.logger)]
         # TODO automatic tag map?
 
 

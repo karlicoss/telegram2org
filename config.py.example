@@ -12,3 +12,5 @@ ORG_TAG = "telegram2rtm" # can be None if you don't want a tag
 TELETHON_SESSION = "/path/to/telethon/session/session.session"
 
 TIMEZONE = 'Europe/London'
+
+NAME_TO_TAG = {}
