@@ -1,3 +1,5 @@
+GROUP_NAME = 'Todos' # group you will forward messages into
+
 STATE_PATH = "/path/to/state/file"
 
 TG_APP_ID = 12345

@@ -1,4 +1,6 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
+from typing import Collection
+
 from datetime import datetime
 import logging
 from os.path import isfile
@@ -6,8 +8,8 @@ import sys
 from sys import argv
 import re
 from typing import List, Dict, Any, Tuple, NamedTuple
-
 import pytz
+
 import telethon.sync # type: ignore
 from telethon import TelegramClient # type: ignore
 from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMediaDocument # type: ignore
@@ -15,18 +17,22 @@ from telethon.tl.types import MessageService, WebPageEmpty # type: ignore
 
 
 from kython import json_loads, atomic_write, json_dumps, group_by_key, json_load
+from kython import import_from
 from kython.org import date2org, datetime2org
-from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION
-
 from kython.klogging import setup_logzero
 
-def get_logger():
-    return logging.getLogger("telegram2org")
+orger = import_from('/L/coding', 'orger')
+from orger import OrgViewAppend, OrgWithKey
+from orger.org_utils import OrgTree, as_org
 
-# returns title and comment
-def format_group(group: List) -> Tuple[int, str, List[str]]:
-    logger = get_logger()
+from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION, GROUP_NAME
 
+
+Timestamp = int
+From = str
+Lines = List[str]
+
+def format_group(group: List, logger) -> Tuple[Timestamp, From, Lines]:
     date = int(group[0].date.timestamp())
 
     def get_from(m):
@@ -81,68 +87,61 @@ def format_group(group: List) -> Tuple[int, str, List[str]]:
         texts = texts[1:]
 
     texts.append(link)
-
     return (date, from_, texts)
 
-State = Dict[str, Any]
-# contains: 'date' -- last date that was forwarded
-# supplementary information, e.g. last message, mainly form debugging
 
-def load_state() -> State:
-    if not isfile(STATE_PATH):
-        return {'date': -1}
-    else:
-        with open(STATE_PATH, 'r') as fo:
-            return json_load(fo)
-
-def save_state(state: State):
-    with atomic_write(STATE_PATH, overwrite=True, mode='w') as fo:
-        json_dumps(fo, state)
-
-def mark_completed(new_date: int):
-    # well not super effecient, but who cares
-    state = load_state()
-    last = state['date']
-    assert new_date > last
-    state['date'] = new_date
-    save_state(state)
-
-def get_tg_tasks():
-    logging.getLogger('telethon.telegram_bare_client').setLevel(logging.INFO)
-    logging.getLogger('telethon.extensions.tcp_client').setLevel(logging.INFO)
-
+def _fetch_tg_tasks(logger):
     client = TelegramClient(TELETHON_SESSION, TG_APP_ID, TG_APP_HASH)
     client.connect()
     client.start()
-    rtm_dialog = next(d for d in client.get_dialogs() if d.name == 'RTM')
-    api_messages = client.get_messages(rtm_dialog.input_entity, limit=1000000)
-
+    [todo_dialog] = [d for d in client.get_dialogs() if d.name == GROUP_NAME]
+    api_messages = client.get_messages(todo_dialog.input_entity, limit=1000000)
 
     messages = [m for m in api_messages if not isinstance(m, MessageService)] # wtf is that...
-    grouped = group_by_key(messages, lambda f: f.date)
+    grouped = group_by_key(messages, lambda f: f.date) # group together multiple forwarded messages. not sure if there is a more robust way but that works well
     tasks = []
     for _, group in sorted(grouped.items(), key=lambda f: f[0]):
-        id_, title, texts = format_group(group)
+        id_, title, texts = format_group(group, logger=logger)
         tasks.append((id_, title, texts))
     return tasks
 
 
-def iter_new_tasks():
-    logger = get_logger()
-    tasks = get_tg_tasks()
-    state = load_state()
-
-    for t in tasks:
-        date, name, notes = t
-        if date <= state['date']:
-            logger.debug(f"Skipping {date} {name}")
-            continue
+def fetch_tg_tasks(logger):
+    try:
+        return [
+            (1234, 'me', [
+                'line 1',
+                'line 2',
+            ]),
+        ]
+        # TODO FIXME return _fetch_tg_tasks(logger=logger)
+    except telethon.errors.rpcerrorlist.RpcMcgetFailError as e:
+        logger.error(f"Telegram has internal issues...")
+        logger.exception(e)
+        # TODO backoff?
+        if 'Telegram is having internal issues, please try again later' in str(e):
+            logger.info('ignoring the exception, it just happens sometimes...')
+            return []
         else:
-            logger.info(f"New task: {date} {name}")
-            yield t
+            raise e
 
-def get_new_tasks():
-    return list(iter_new_tasks())
+
+class Telegram2Org(OrgViewAppend):
+    file = __file__
+    logger_tag = 'telegram2org'
+
+
+    def get_items(self) -> Collection[OrgWithKey]:
+        for _ in fetch_tg_tasks(logger=self.logger):
+            raise NotImplementedError
+        # raise RuntimeError # TODO should query telegram here?
+
+
+def main():
+    logging.getLogger('telethon.telegram_bare_client').setLevel(logging.INFO)
+    logging.getLogger('telethon.extensions.tcp_client').setLevel(logging.INFO)
+    Telegram2Org.main(default_to=ORG_FILE_PATH, default_state=STATE_PATH)
+
 
 def as_org(task) -> str:
     id_, name, notes = task
@@ -161,43 +160,10 @@ def as_org(task) -> str:
     return res
 
 
-def main():
-    logger = get_logger()
-    setup_logzero(logger, level=logging.DEBUG)
-
-    test: bool
-    if len(argv) > 1 and argv[1] == '--test':
-        test = True
-    else:
-        test = False
-
-    try:
-        tasks = get_new_tasks()
-    except telethon.errors.rpcerrorlist.RpcMcgetFailError as e:
-        logger.error(f"Telegram has internal issues...")
-        logger.exception(e)
-        if 'Telegram is having internal issues, please try again later' in str(e):
-            logger.info('ignoring the exception, it just happens sometimes...')
-            sys.exit(0)
-        else:
-            raise e
-
-    if len(tasks) == 0:
-        logger.info(f"No new tasks, exiting..")
-        return
-
-    orgs = [as_org(t) for t in tasks]
-    ss = '\n\n'.join(orgs) + '\n\n'
-
-    # https://stackoverflow.com/a/13232181 should be atomic?
-    import io
-    with io.open(ORG_FILE_PATH, 'a') as fo:
-        fo.write(ss)
-
-    if not test:
-        for date, _, _ in tasks:
-            mark_completed(date)
-
+    # # https://stackoverflow.com/a/13232181 should be atomic?
+    # import io
+    # with io.open(ORG_FILE_PATH, 'a') as fo:
+    #     fo.write(ss)
 
 if __name__ == '__main__':
     main()
