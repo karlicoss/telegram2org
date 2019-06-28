@@ -1,16 +1,25 @@
-GROUP_NAME = 'Todos' # group you will forward messages into
+# copy this file into config.py and adjust the values as needed
 
-STATE_PATH = "/path/to/state/file"
-
+# see Telethon setup for these https://telethon.readthedocs.io/en/latest/
 TG_APP_ID = 12345
 TG_APP_HASH = "g3ergegg"
-
-ORG_FILE_PATH = "/path/to/output.org"
-ORG_TAG = "telegram2rtm" # can be None if you don't want a tag
-
 # especially useful in cron, where you can't enter the password
 TELETHON_SESSION = "/path/to/telethon/session/session.session"
 
+
+# private group you will forward messages into
+GROUP_NAME = 'Todos'
+
+
+# output org file to which new items will be appended
+ORG_FILE_PATH = "/path/to/output.org"
+# state that keeps already processed entries
+STATE_PATH = "/path/to/state/file"
+# file tags for org file; can be None if you don't want a tag
+ORG_TAG = "telegram2rtm"
+
+
 TIMEZONE = 'Europe/London'
 
+# optional mapping from contact usernames to org-mode tags
 NAME_TO_TAG = {}
