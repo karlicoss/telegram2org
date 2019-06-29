@@ -12,11 +12,9 @@ from telethon.tl.types import MessageService, WebPageEmpty # type: ignore
 
 
 from kython import json_loads, atomic_write, json_dumps, group_by_key, json_load
-from kython import import_from
 from kython.korg import date2org, datetime2org, link as org_link
 from kython.klogging import setup_logzero
 
-orger = import_from('/L/coding', 'orger')
 from orger import OrgViewAppend, OrgWithKey
 from orger.org_utils import OrgTree, as_org
 
