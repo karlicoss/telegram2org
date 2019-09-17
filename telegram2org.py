@@ -15,8 +15,8 @@ from kython import json_loads, atomic_write, json_dumps, group_by_key, json_load
 from kython.korg import date2org, datetime2org, link as org_link
 from kython.klogging import setup_logzero
 
-from orger import OrgViewAppend, OrgWithKey
-from orger.org_utils import OrgTree, as_org
+from orger import Interactive
+from orger.org_utils import todo
 
 from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION, GROUP_NAME, TIMEZONE, NAME_TO_TAG
 
@@ -153,10 +153,7 @@ header += f"""
 """.lstrip()
 
 
-class Telegram2Org(OrgViewAppend):
-    file = __file__
-    logger_tag = 'telegram2org'
-
+class Telegram2Org(Interactive):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__( # type: ignore
             *args,
@@ -164,27 +161,24 @@ class Telegram2Org(OrgViewAppend):
             **kwargs,
         )
 
-    def get_items(self) -> Collection[OrgWithKey]:
+    def get_items(self):
         now = datetime.now(tz=pytz.timezone(TIMEZONE))
         # TODO extract date from messages?
-        return [(
-            str(timestamp),
-            OrgTree(as_org(
-                todo=True,
+        for timestamp, name, tags, lines in fetch_tg_tasks(logger=self.logger):
+            yield str(timestamp), todo(
+                now,
+
                 heading=name,
                 tags=tags,
                 body='\n'.join(lines + ['']),
-                created=now, # TODO scheduled automatic from todo=True? might be confusing
-                inline_created=False,
-            ))
-        ) for timestamp, name, tags, lines in fetch_tg_tasks(logger=self.logger)]
+            )
         # TODO automatic tag map?
 
 
 def main():
     logging.getLogger('telethon.telegram_bare_client').setLevel(logging.INFO)
     logging.getLogger('telethon.extensions.tcp_client').setLevel(logging.INFO)
-    Telegram2Org.main(default_to=ORG_FILE_PATH, default_state=STATE_PATH)
+    Telegram2Org.main()
 
 
 if __name__ == '__main__':
