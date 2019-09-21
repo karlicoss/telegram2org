@@ -16,7 +16,7 @@ from kython.korg import date2org, datetime2org, link as org_link
 from kython.klogging import setup_logzero
 
 from orger import InteractiveView
-from orger.org_utils import todo
+from orger.common import todo
 
 from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION, GROUP_NAME, TIMEZONE, NAME_TO_TAG
 
