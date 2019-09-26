@@ -11,12 +11,12 @@ from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMed
 from telethon.tl.types import MessageService, WebPageEmpty # type: ignore
 
 
-from kython import json_loads, atomic_write, json_dumps, group_by_key, json_load
-from kython.korg import date2org, datetime2org, link as org_link
+from kython import group_by_key
 from kython.klogging import setup_logzero
 
 from orger import InteractiveView
 from orger.common import todo
+from orger.inorganic import link as org_link
 
 from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION, GROUP_NAME, TIMEZONE, NAME_TO_TAG
 
