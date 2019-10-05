@@ -11,6 +11,8 @@ TELETHON_SESSION = "/path/to/telethon/session/session.session"
 GROUP_NAME = 'Todos'
 
 
+# TODO rely on orger for that?
+
 # output org file to which new items will be appended
 ORG_FILE_PATH = "/path/to/output.org"
 # state that keeps already processed entries

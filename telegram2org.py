@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+"""
+Imagine a friend asked you for something, or sent you a link or a video, but you don't have time to process that right at the moment.
+
+Normally I'd share their message to my TODO list app so I can process it later.
+However, official Android app for Telegram doesn't have sharing capabilities.
+
+This is a tool that allows you to overcome this restriction by forwarding messages you want to
+remember about to a special private channel. Then it grabs the messages from this private channel and creates TODO items from it!
+
+That way you keep your focus while not being mean ignoring your friends' messages.
+"""
+
 from datetime import datetime
 import logging
 import re
@@ -16,7 +28,7 @@ from kython.klogging import setup_logzero
 
 from orger import InteractiveView
 from orger.common import todo
-from orger.inorganic import link as org_link
+from orger.inorganic import link
 
 from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION, GROUP_NAME, TIMEZONE, NAME_TO_TAG
 
@@ -49,7 +61,7 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
     froms = [get_from(m) for m in group]
     tags = {NAME_TO_TAG[f] for f in froms if f in NAME_TO_TAG}
 
-    from_ = ', '.join(org_link(url=f'https://t.me/{f}', title=f) for f in sorted(set(froms)))
+    from_ = ', '.join(link(url=f'https://t.me/{f}', title=f) for f in sorted(set(froms)))
 
     texts: List[str] = []
     for m in group:
@@ -66,7 +78,7 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
                 uu = "*empty web page*"
             else:
                 title = page.display_url if page.title is None else page.title
-                uu = org_link(url=page.url, title=title)
+                uu = link(url=page.url, title=title)
                 if page.description is not None:
                     uu += ' ' + page.description
             texts.append(uu)
@@ -102,7 +114,7 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
         else:
             break
 
-    heading = re.sub(r'\s', ' ', heading) # TODO rely on korg for that?
+    heading = re.sub(r'\s', ' ', heading) # TODO rely on inorganic for that?
     return (date, heading, tags, texts)
 
 

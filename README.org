@@ -1,0 +1,36 @@
+# -*- org-confirm-babel-evaluate: nil; -*-
+
+* Description
+
+#+begin_src python :exports results :results drawer
+import telegram2org
+return telegram2org.__doc__
+#+end_src
+
+#+RESULTS:
+:results:
+
+Imagine a friend asked you for something, or sent you a link or a video, but you don't have time to process that right at the moment.
+
+Normally I'd share their message to my TODO list app so I can process it later.
+However, official Android app for Telegram doesn't have sharing capabilities.
+
+This is a tool that allows you to overcome this restriction by forwarding messages you want to
+remember about to a special private channel. Then it grabs the messages from this private channel and creates TODO items from it!
+
+That way you keep your focus while not being mean ignoring your friends' messages.
+:end:
+
+* Setting up
+
+#+begin_src bash
+  cp config.py.example config.py
+  edit config.py # follow comments in the file to set up
+#+end_src
+
+* Running
+  TODO
+
+* Dependencies
+- [[https://telethon.readthedocs.io/en/latest][Telethon]] as Telegram clinet
+- [[https://github.com/karlicoss/orger][Orger]] for rendering
