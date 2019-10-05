@@ -30,7 +30,7 @@ from orger import InteractiveView
 from orger.common import todo
 from orger.inorganic import link
 
-from config import STATE_PATH, ORG_TAG, ORG_FILE_PATH, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION, GROUP_NAME, TIMEZONE, NAME_TO_TAG
+from config import ORG_TAG, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION, GROUP_NAME, TIMEZONE, NAME_TO_TAG
 
 
 Timestamp = int
@@ -103,7 +103,6 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
     # in_context = f'https://t.me/{chat}/{mid}'
     # TODO detect by data-msg-id?
     texts = list(reversed(texts))
-
 
     heading = from_
     LIMIT = 400

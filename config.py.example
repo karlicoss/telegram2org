@@ -11,16 +11,11 @@ TELETHON_SESSION = "/path/to/telethon/session/session.session"
 GROUP_NAME = 'Todos'
 
 
-# TODO rely on orger for that?
-
-# output org file to which new items will be appended
-ORG_FILE_PATH = "/path/to/output.org"
-# state that keeps already processed entries
-STATE_PATH = "/path/to/state/file"
 # file tags for org file; can be None if you don't want a tag
-ORG_TAG = "telegram2rtm"
+ORG_TAG = "telegram2org"
 
 
+# org mode uses local timezone and telegram uses UTC, so we have to specify it
 TIMEZONE = 'Europe/London'
 
 # optional mapping from contact usernames to org-mode tags
