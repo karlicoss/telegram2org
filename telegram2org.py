@@ -22,11 +22,6 @@ from telethon import TelegramClient # type: ignore
 from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMediaDocument, MessageMediaVenue # type: ignore
 from telethon.tl.types import MessageService, WebPageEmpty # type: ignore
 
-
-# TODO FIXME
-from kython import group_by_key
-from kython.klogging import setup_logzero
-
 from orger import InteractiveView
 from orger.common import todo
 from orger.inorganic import link
@@ -123,13 +118,17 @@ def _fetch_tg_tasks(logger):
     client.connect()
     client.start()
     [todo_dialog] = [d for d in client.get_dialogs() if d.name == GROUP_NAME]
-    api_messages = client.get_messages(todo_dialog.input_entity, limit=1000000)
+    api_messages = client.get_messages(todo_dialog.input_entity, limit=1000000) # TODO careful about limit?
 
     messages = [m for m in api_messages if not isinstance(m, MessageService)] # wtf is that...
-    grouped = group_by_key(messages, lambda f: f.date) # group together multiple forwarded messages. not sure if there is a more robust way but that works well
+
+    # group together multiple forwarded messages. not sure if there is a more robust way but that works well
+    from itertools import groupby
+    key = lambda f: f.date
+    grouped = groupby(sorted(messages, key=key), key=key)
     tasks = []
-    for _, group in sorted(grouped.items(), key=lambda f: f[0]):
-        res = format_group(group, dialog=todo_dialog, logger=logger)
+    for _, group in grouped:
+        res = format_group(list(group), dialog=todo_dialog, logger=logger)
         tasks.append(res)
     return tasks
 
