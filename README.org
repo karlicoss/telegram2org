@@ -2,11 +2,11 @@
 
 * Description
 
-#+begin_src python :exports results :results drawer
-import telegram2org
-return telegram2org.__doc__
+#+begin_src python :exports results :results output drawer replace :python "with_secrets python3"
+import telegram2org; print(telegram2org.__doc__)
 #+end_src
 
+#+name: telegram2org_doc
 #+RESULTS:
 :results:
 
@@ -19,7 +19,9 @@ This is a tool that allows you to overcome this restriction by forwarding messag
 remember about to a special private channel. Then it grabs the messages from this private channel and creates TODO items from it!
 
 That way you keep your focus while not being mean ignoring your friends' messages.
+
 :end:
+
 
 * Setting up
 
