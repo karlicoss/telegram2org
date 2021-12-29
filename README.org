@@ -25,13 +25,43 @@ That way you keep your focus while not being mean ignoring your friends' message
 
 * Setting up
 
+** Setup for telegram2org
 #+begin_src bash
+  # Install dependencies
+  pip install -r requirements.txt
+
+  # Configure
   cp config.py.example config.py
   edit config.py # follow comments in the file to set up
 #+end_src
 
+** Creating your "Todos" empty group
+   Telegram requires you to add at least one person in a new group. To satisfy this requirement and also avoid spamming a random contact, you can [[https://www.reddit.com/r/Telegram/comments/l4p5me/how_to_create_a_groupchat_without_adding_any/][add a bot instead]].
+
+   I don't know of any no-op bots around waiting to be added, but you can create your own bot. I'll summarize the process, based on the [[https://core.telegram.org/bots#3-how-do-i-create-a-bot][bot documentation]] page:
+   - open a chat with [[https://t.me/botfather][@BotFather]]
+   - send it these two simple commands
+   #+begin_src
+   # Start the bot creation flow
+   /start
+
+   # Create a new bot
+   /newbot
+
+   # Enter a name for your bot, ending in "...Bot" and you're done.
+   # Here's a python username gen: pip install random-username; random_username
+   #+end_src
+
+   Now you can create your group by inviting your newborn bot. You can also remove the bot from the group after this process.
+
 * Running
-  TODO
+#+begin_src bash
+  ./telegram2org.py
+  # Please enter your phone (or bot token): +1123567890
+  # Please enter the code you received: 12345
+#+end_src
+
+The telegram client will ask for your phone number. After you enter the number, you'll receive a verification code in your Telegram app. Use that code in the second prompt.
 
 * Dependencies
 - [[https://telethon.readthedocs.io/en/latest][Telethon]] as Telegram clinet
