@@ -164,6 +164,9 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
     LIMIT = 400
     lines = '\n'.join(texts).splitlines() # meh
     for line in lines:
+        # Skip file names in header
+        if line.startswith("[[file:") and line.endswith("]]"):
+            continue
         if len(heading) + len(line) <= LIMIT:
             heading += " " + line
         else:
