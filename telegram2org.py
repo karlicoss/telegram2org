@@ -11,28 +11,69 @@ remember about to a special private channel. Then it grabs the messages from thi
 That way you keep your focus while not being mean ignoring your friends' messages.
 """
 
+from pathlib import Path
 from datetime import datetime
 import logging
 import re
-from typing import List, Dict, Tuple, Collection, Set
+from typing import Collection, Dict, List, Optional, Set, Tuple, Union
+import os
 import pytz
 
-import telethon.sync # type: ignore
-from telethon import TelegramClient # type: ignore
-from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMediaDocument, MessageMediaVenue # type: ignore
-from telethon.tl.types import MessageService, WebPageEmpty # type: ignore
+import telethon.sync  # type: ignore
+from telethon import TelegramClient  # type: ignore
+from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMediaDocument, MessageMediaVenue  # type: ignore
+from telethon.tl.types import Message, MessageService, WebPageEmpty  # type: ignore
 
 from orger import InteractiveView
 from orger.common import todo
 from orger.inorganic import link
 
-from config import ORG_TAG, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION, GROUP_NAME, TIMEZONE, NAME_TO_TAG
+from config import ORG_TAG, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION, GROUP_NAME, TIMEZONE, NAME_TO_TAG, MEDIA_DIR
 
 
 Timestamp = int
 From = str
 Lines = List[str]
 Tags = Set[str]
+
+SAVE_DIR = Path(MEDIA_DIR)
+
+
+def simple_download_progress(filename: str):
+    try:
+        from humanize.filesize import naturalsize
+    except:
+        naturalsize = lambda x: f"{x:.2f} bytes"
+
+    def callback(current, total):
+        print(
+            f"[{filename}] Downloaded {naturalsize(current)} / {naturalsize(total)} [{current/total:.2%}]"
+        )
+
+    return callback
+
+
+def download_document_if_not_present(
+    message: Message, filename: str, logger
+) -> Optional[Path]:
+    SAVE_DIR.mkdir(parents=True, exist_ok=True)
+
+    destination = SAVE_DIR / filename
+
+    if destination.exists():
+        if destination.is_dir():
+            logger.error(f"Could not save file as {destination} as it is a directory.")
+            return None
+
+        logger.info(f"File {destination} exists already, skipping download.")
+        return destination
+
+    saved_dest = message.download_media(
+        file=destination,
+        progress_callback=simple_download_progress(destination.as_posix()),
+    )
+
+    return destination
 
 
 def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Lines]:
@@ -51,6 +92,8 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
         u = fw.sender
         if u.username is not None:
             return u.username
+        elif u.last_name is None:
+            return f"{u.first_name}"
         else:
             return f"{u.first_name} {u.last_name}"
 
@@ -79,11 +122,28 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
                     uu += ' ' + page.description
             texts.append(uu)
         elif isinstance(e, MessageMediaPhoto):
-            # TODO no file location? :(
-            texts.append("*PHOTO*")
+            saved_location = download_document_if_not_present(
+                message=m, filename=f"{e.photo.id}.jpg", logger=logger
+            )
+            if saved_location is not None:
+                texts.append(f"[[file:{saved_location.as_posix()}]]")
+            else:
+                texts.append("ERROR SAVING PHOTO {m.photo.id}")
             # print(vars(e))
         elif isinstance(e, MessageMediaDocument):
-            texts.append("*DOCUMENT*")
+            try:
+                original_file_name = e.document.attributes[0].file_name
+            except:
+                naive_file_ext = e.document.mime_type.split("/")[-1]
+                original_file_name = "{}.{}".format(e.document.id, naive_file_ext)
+
+            saved_location = download_document_if_not_present(
+                message=m, filename=original_file_name, logger=logger
+            )
+            if saved_location is not None:
+                texts.append(f"[[file:{saved_location.as_posix()}]]")
+            else:
+                texts.append("ERROR SAVING DOCUMENT {m.document.id}")
             # print(vars(e.document))
         elif isinstance(e, MessageMediaVenue):
             texts.append("*VENUE* " + e.title)
@@ -104,6 +164,9 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
     LIMIT = 400
     lines = '\n'.join(texts).splitlines() # meh
     for line in lines:
+        # Skip file names in header
+        if line.startswith("[[file:") and line.endswith("]]"):
+            continue
         if len(heading) + len(line) <= LIMIT:
             heading += " " + line
         else:

@@ -14,6 +14,8 @@ GROUP_NAME = 'Todos'
 # file tags for org file; can be None if you don't want a tag
 ORG_TAG = "telegram2org"
 
+# directory where the files are downloaded
+MEDIA_DIR = "media/"
 
 # org mode uses local timezone and telegram uses UTC, so we have to specify it
 TIMEZONE = 'Europe/London'
