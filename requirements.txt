@@ -1,4 +1,3 @@
 telethon
 orger
 pytz
-logzero

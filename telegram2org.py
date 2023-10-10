@@ -12,15 +12,21 @@ That way you keep your focus while not being mean ignoring your friends' message
 """
 
 from datetime import datetime
+from itertools import groupby
 import logging
 import re
-from typing import List, Dict, Tuple, Collection, Set
-import pytz
+from typing import List, Tuple, Set
 
-import telethon.sync # type: ignore
-from telethon import TelegramClient # type: ignore
-from telethon.tl.types import MessageMediaWebPage, MessageMediaPhoto, MessageMediaDocument, MessageMediaVenue # type: ignore
-from telethon.tl.types import MessageService, WebPageEmpty # type: ignore
+import pytz
+import telethon  # type: ignore[import-untyped]
+from telethon.tl.types import (  # type: ignore[import-untyped]
+    MessageMediaDocument,
+    MessageMediaPhoto,
+    MessageMediaVenue,
+    MessageMediaWebPage,
+    MessageService,
+    WebPageEmpty,
+)
 
 from orger import InteractiveView
 from orger.common import todo
@@ -114,7 +120,7 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
 
 
 def _fetch_tg_tasks(logger):
-    client = TelegramClient(TELETHON_SESSION, TG_APP_ID, TG_APP_HASH)
+    client = telethon.TelegramClient(TELETHON_SESSION, TG_APP_ID, TG_APP_HASH)
     client.connect()
     client.start()
     [todo_dialog] = [d for d in client.get_dialogs() if d.name == GROUP_NAME]
@@ -123,7 +129,6 @@ def _fetch_tg_tasks(logger):
     messages = [m for m in api_messages if not isinstance(m, MessageService)] # wtf is that...
 
     # group together multiple forwarded messages. not sure if there is a more robust way but that works well
-    from itertools import groupby
     key = lambda f: f.date
     grouped = groupby(sorted(messages, key=key), key=key)
     tasks = []
@@ -156,7 +161,7 @@ def fetch_tg_tasks(logger):
             raise e
 
 
-def make_header():
+def make_header() -> str:
     parts = []
     if ORG_TAG is not None:
          parts.append(f'#+FILETAGS: {ORG_TAG}')
@@ -166,11 +171,8 @@ def make_header():
 
 class Telegram2Org(InteractiveView):
     def __init__(self, *args, **kwargs) -> None:
-        super().__init__( # type: ignore
-            *args,
-            file_header=make_header(),
-            **kwargs,
-        )
+        kwargs['file_header'] = make_header()
+        super().__init__(*args, **kwargs)
 
     def get_items(self):
         now = datetime.now(tz=pytz.timezone(TIMEZONE))
@@ -178,7 +180,6 @@ class Telegram2Org(InteractiveView):
         for timestamp, name, tags, lines in fetch_tg_tasks(logger=self.logger):
             yield str(timestamp), todo(
                 now,
-
                 heading=name,
                 tags=tags,
                 body='\n'.join(lines + ['']),
@@ -186,7 +187,7 @@ class Telegram2Org(InteractiveView):
         # TODO automatic tag map?
 
 
-def main():
+def main() -> None:
     logging.getLogger('telethon.telegram_bare_client').setLevel(logging.INFO)
     logging.getLogger('telethon.extensions.tcp_client').setLevel(logging.INFO)
     Telegram2Org.main()
