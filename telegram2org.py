@@ -18,7 +18,10 @@ import re
 from typing import List, Tuple, Set
 
 import pytz
-import telethon  # type: ignore[import-untyped]
+
+# telethon.sync is necessary to prevent using async api
+import telethon.sync  # type: ignore[import-untyped]
+import telethon
 from telethon.tl.types import (  # type: ignore[import-untyped]
     MessageMediaDocument,
     MessageMediaPhoto,
