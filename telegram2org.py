@@ -26,6 +26,7 @@ from telethon.tl.types import (  # type: ignore[import-untyped]
     MessageMediaWebPage,
     MessageService,
     WebPageEmpty,
+    WebPagePending,
 )
 
 from orger import InteractiveView
@@ -78,6 +79,9 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
             uu: str
             if isinstance(page, WebPageEmpty):
                 uu = "*empty web page*"
+            elif isinstance(page, WebPagePending):
+                # doesn't have title/url
+                uu = "*pending web page*"
             else:
                 title = page.display_url if page.title is None else page.title
                 uu = link(url=page.url, title=title)
