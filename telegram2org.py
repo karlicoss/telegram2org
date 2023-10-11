@@ -23,6 +23,7 @@ import pytz
 import telethon.sync  # type: ignore[import-untyped]
 import telethon
 from telethon.tl.types import (  # type: ignore[import-untyped]
+    InputMessagesFilterPinned,
     MessageMediaDocument,
     MessageMediaPhoto,
     MessageMediaVenue,
@@ -45,20 +46,28 @@ Lines = List[str]
 Tags = Set[str]
 
 
-def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Lines]:
+def format_group(group: List, logger) -> Tuple[Timestamp, From, Tags, Lines]:
     date = int(group[0].date.timestamp())
 
-    def get_from(m):
-        fw = m.forward
-        if fw is None:
-            return 'me'
+    def get_from(m) -> str:
+        chat = m.get_chat()
+        is_special_group = getattr(chat, 'title', None) == GROUP_NAME
 
-        if fw.sender is None:
-            if fw.chat is not None:
-                return fw.chat.title
-            else:
-                return "ERROR UNKNOWN SENDER"
-        u = fw.sender
+        if is_special_group:
+            fw = m.forward
+            if fw is None:
+                # this is just a message typed manually into the special chat
+                return 'me'
+
+            if fw.sender is None:
+                if fw.chat is not None:
+                    return fw.chat.title
+                else:
+                    return "ERROR UNKNOWN SENDER"
+            u = fw.sender
+        else:
+            u = m.sender
+
         if u.username is not None:
             return u.username
         else:
@@ -114,8 +123,11 @@ def format_group(group: List, dialog, logger) -> Tuple[Timestamp, From, Tags, Li
     texts = list(reversed(texts))
 
     heading = from_
+    if len(group) == 1 and group[0].pinned:
+        heading = 'pinned: ' + from_  # meh..
+
     LIMIT = 400
-    lines = '\n'.join(texts).splitlines() # meh
+    lines = '\n'.join(texts).splitlines()  # meh
     for line in lines:
         if len(heading) + len(line) <= LIMIT:
             heading += " " + line
@@ -130,17 +142,31 @@ def _fetch_tg_tasks(logger):
     client = telethon.TelegramClient(TELETHON_SESSION, TG_APP_ID, TG_APP_HASH)
     client.connect()
     client.start()
-    [todo_dialog] = [d for d in client.get_dialogs() if d.name == GROUP_NAME]
-    api_messages = client.get_messages(todo_dialog.input_entity, limit=1000000) # TODO careful about limit?
 
-    messages = [m for m in api_messages if not isinstance(m, MessageService)] # wtf is that...
+    messages = []
+
+    for dialog in client.get_dialogs():
+        if not dialog.is_user:
+            # skip channels -- they tend to have lots of irrelevant pinned messages
+            continue
+        pinned_messages = client.get_messages(
+            dialog.input_entity,
+            filter=InputMessagesFilterPinned,
+            limit=1000,  # TODO careful about the limit?
+        )
+        messages.extend(pinned_messages)
+
+    [todo_dialog] = [d for d in client.get_dialogs() if d.name == GROUP_NAME]
+    api_messages = client.get_messages(todo_dialog.input_entity, limit=1000000)  # TODO careful about the limit?
+
+    messages.extend(m for m in api_messages if not isinstance(m, MessageService))  # wtf is that...
 
     # group together multiple forwarded messages. not sure if there is a more robust way but that works well
     key = lambda f: f.date
     grouped = groupby(sorted(messages, key=key), key=key)
     tasks = []
     for _, group in grouped:
-        res = format_group(list(group), dialog=todo_dialog, logger=logger)
+        res = format_group(list(group), logger=logger)
         tasks.append(res)
     return tasks
 
