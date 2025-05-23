@@ -10,18 +10,21 @@ remember about to a special private channel. Then it grabs the messages from thi
 
 That way you keep your focus while not being mean ignoring your friends' messages.
 """
+from __future__ import annotations
 
-from datetime import datetime
-from itertools import groupby
 import logging
 import re
-from typing import List, Tuple, Set
+from datetime import datetime
+from itertools import groupby
 
 import pytz
+import telethon
 
 # telethon.sync is necessary to prevent using async api
 import telethon.sync  # type: ignore[import-untyped]
-import telethon
+from orger import InteractiveView
+from orger.common import todo
+from orger.inorganic import link
 from telethon.tl.types import (  # type: ignore[import-untyped]
     InputMessagesFilterPinned,
     MessageMediaDocument,
@@ -33,20 +36,23 @@ from telethon.tl.types import (  # type: ignore[import-untyped]
     WebPagePending,
 )
 
-from orger import InteractiveView
-from orger.common import todo
-from orger.inorganic import link
-
-from config import ORG_TAG, TG_APP_HASH, TG_APP_ID, TELETHON_SESSION, GROUP_NAME, TIMEZONE, NAME_TO_TAG
-
+from config import (
+    GROUP_NAME,
+    NAME_TO_TAG,
+    ORG_TAG,
+    TELETHON_SESSION,
+    TG_APP_HASH,
+    TG_APP_ID,
+    TIMEZONE,
+)
 
 Timestamp = int
 From = str
-Lines = List[str]
-Tags = Set[str]
+Lines = list[str]
+Tags = set[str]
 
 
-def format_group(group: List, logger) -> Tuple[Timestamp, From, Tags, Lines]:
+def format_group(group: list, logger) -> tuple[Timestamp, From, Tags, Lines]:
     date = int(group[0].date.timestamp())
 
     def get_from(m) -> str:
@@ -78,7 +84,7 @@ def format_group(group: List, logger) -> Tuple[Timestamp, From, Tags, Lines]:
 
     from_ = ', '.join(link(url=f'https://t.me/{f}', title=f) for f in sorted(set(froms)))
 
-    texts: List[str] = []
+    texts: list[str] = []
     for m in group:
         texts.append(m.message)
         # TODO hmm, _text contains markdown? could convert it to org...
@@ -120,7 +126,7 @@ def format_group(group: List, logger) -> Tuple[Timestamp, From, Tags, Lines]:
     # and couldn't get original forwarded message id from message object..
     # in_context = f'https://t.me/{chat}/{mid}'
     # TODO detect by data-msg-id?
-    texts = list(reversed(texts))
+    texts.reverse()
 
     heading = from_
     if len(group) == 1 and group[0].pinned:
@@ -189,7 +195,7 @@ def fetch_tg_tasks(logger):
         # ]
         return _fetch_tg_tasks(logger=logger)
     except telethon.errors.rpcerrorlist.RpcMcgetFailError as e:
-        logger.error(f"Telegram has internal issues...")
+        logger.error("Telegram has internal issues...")
         logger.exception(e)
         # TODO backoff?
         if 'Telegram is having internal issues, please try again later' in str(e):
@@ -220,7 +226,7 @@ class Telegram2Org(InteractiveView):
                 now,
                 heading=name,
                 tags=tags,
-                body='\n'.join(lines + ['']),
+                body='\n'.join([*lines, '']),
             )
         # TODO automatic tag map?
 
