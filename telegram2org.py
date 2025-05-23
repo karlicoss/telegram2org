@@ -145,7 +145,9 @@ def _fetch_tg_tasks(logger):
 
     messages = []
 
-    for dialog in client.get_dialogs():
+    all_dialogs = client.get_dialogs()
+
+    for dialog in all_dialogs:
         if not dialog.is_user:
             # skip channels -- they tend to have lots of irrelevant pinned messages
             continue
@@ -156,10 +158,13 @@ def _fetch_tg_tasks(logger):
         )
         messages.extend(pinned_messages)
 
-    [todo_dialog] = [d for d in client.get_dialogs() if d.name == GROUP_NAME]
-    api_messages = client.get_messages(todo_dialog.input_entity, limit=1000000)  # TODO careful about the limit?
+    # handle multiple dialogs just in case.. it might happen if you converted to supergroup at some point or did something like that
+    # seems like the old dialog is still in API even though it doesn't display in the app?
+    todo_dialogs = [d for d in all_dialogs if d.name == GROUP_NAME]
+    for todo_dialog in todo_dialogs:
+        api_messages = client.get_messages(todo_dialog.input_entity, limit=1000000)  # TODO careful about the limit?
+        messages.extend(m for m in api_messages if not isinstance(m, MessageService))  # wtf is that...
 
-    messages.extend(m for m in api_messages if not isinstance(m, MessageService))  # wtf is that...
 
     # group together multiple forwarded messages. not sure if there is a more robust way but that works well
     key = lambda f: f.date
